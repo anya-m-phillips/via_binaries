@@ -1,8 +1,8 @@
 ##### THIS WILL BE RUn On CANNON! ! ! 
-
+print("importing packages...")
 import sys
-sys.path.append('/Users/anyaphillips/Desktop/harvard/research/via_binaries/scripts')
-
+#sys.path.append('/Users/anyaphillips/Desktop/harvard/research/via_binaries/scripts')
+sys.path.append('/n/home02/amphillips/via_binaries/scripts')
 import PETAR_ANALYSIS_FUNCTIONS as paf
 import petar
 import numpy as np
@@ -91,14 +91,22 @@ rng = np.random.default_rng(seed=42)
 
 
 #### loop through variable first visit lengths. 
-dt1_vals  = np.arange(5, 105, 5) # 20 options 
-dt = 30
-dt2_vals = np.arange(30, 5*365+dt, dt)
+
+dt1_min, dt1_max, dt1_step = 5,100,5
+dt1_vals  = np.arange(dt1_min, dt1_max+dt1_step, dt1_step) # 20 options 
+
+dt2_min, dt2_max, dt2_step = 30, 5*365, 30
+dt2_vals = np.arange(dt2_min, dt2_max+dt2_step, dt2_step)
+
+#### print the start/stop/step values for plotting later... 
+print("dt1_min, dt1_max, dt1_step", dt1_min, dt1_max, dt1_step)
+print("dt2_min, dt2_max, dt2_step", dt2_min, dt2_max, dt2_step)
 
 detection_fractions = []
-for dt1_val in tqdm(dt1_vals):
+for k, dt1_val in enumerate(dt1_vals):
+    print("iteration %i / %i"%(k, len(dt1_vals)+1))
     detection_fractions_this_dt1 = []
-    for dt2_val in dt2_vals:
+    for dt2_val in tqdm(dt2_vals):
         obstimes = get_obstime(N=N, DT1=dt1_val, DT2=dt2_val)
         rvs = paf.get_rvs(params, obstimes, verbose=False)
         detected, delta_vsys = paf.get_detections(
