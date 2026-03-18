@@ -3,7 +3,7 @@
 #SBATCH --nodes=1                # node count
 #SBATCH --ntasks-per-node=1     # number of tasks per node
 #SBATCH --cpus-per-task=1        # cpu-cores per task (>1 if multi-threaded tasks)
-#SBATCH --mem=1G             # memory per cpu-core (4G is default)
+#SBATCH --mem=500M             # memory per cpu-core (4G is default)
 #SBATCH --time=1:00:00          # total run time limit (HH:MM:SS)  HAD -r 0.0001
 #SBATCH -p conroy,itc_cluster,shared,sapphire #partition to submit to
 #SBATCH --mail-type=END
@@ -17,8 +17,7 @@ module load gcc/14.2.0-fasrc01 gsl/2.8-fasrc01
 mamba activate petar_env
 
 
-# Map array index to DT1 = 2, 4, 6, ..., 150
-# DT1=$(( 2 * SLURM_ARRAY_TASK_ID + 2 ))
+# in the dense case, search DT1=1 day. 
 DT1=${SLURM_ARRAY_TASK_ID}
 
 # Filename matches the subjob order
