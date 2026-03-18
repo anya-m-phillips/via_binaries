@@ -21,6 +21,6 @@ mamba activate petar_env
 DT1=$(( 2 * SLURM_ARRAY_TASK_ID + 2 ))
 
 # Filename matches the subjob order
-FILENAME="filename${SLURM_ARRAY_TASK_ID}"
+FILENAME="ms_${SLURM_ARRAY_TASK_ID}"
 
 python -u mock_obs_par.py --dt1="${DT1}" --filename="${FILENAME}"
