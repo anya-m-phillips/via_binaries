@@ -3,7 +3,7 @@ print("importing packages...")
 import sys
 #sys.path.append('/Users/anyaphillips/Desktop/harvard/research/via_binaries/scripts')
 sys.path.append('/n/home02/amphillips/via_binaries/scripts')
-import PETAR_ANALYSIS_FUNCTIONS as paf
+import functions as paf
 import petar
 import numpy as np
 import argparse

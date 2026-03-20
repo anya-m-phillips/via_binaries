@@ -1,11 +1,13 @@
 ##### THIS WILL BE RUn On CANNON! ! ! 
 print("importing packages...")
 import sys
-#sys.path.append('/Users/anyaphillips/Desktop/harvard/research/via_binaries/scripts')
-sys.path.append('/n/home02/amphillips/via_binaries/scripts')
+sys.path.append('/Users/anyaphillips/Desktop/harvard/research/via_binaries/scripts') # my machine. 
+# sys.path.append('/n/home02/amphillips/via_binaries/scripts') # cannon
 import functions as paf
 import petar
 import numpy as np
+import argparse
+
 
 from astropy.table import Table
 from scipy.stats import binned_statistic_2d
@@ -82,43 +84,40 @@ def get_obstime(N, DT1, DT2):
 
 
 #------------------------------------------------#
-#           MAIN PROGRAM                         #
+#                MAIN PROGRAM                    #
 #------------------------------------------------#
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dt1", type=int)
+    parser.add_argument("--filename", type=str)
+    args = parser.parse_args()
 
+dt1_val = args.dt1
 
-### RUN THE SAMPLER
-rng = np.random.default_rng(seed=42)
-
-
-#### loop through variable first visit lengths. 
-
-dt1_min, dt1_max, dt1_step = 5,100,5
-dt1_vals  = np.arange(dt1_min, dt1_max+dt1_step, dt1_step) # 20 options 
-
-dt2_min, dt2_max, dt2_step = 30, 5*365, 30
+dt2_min, dt2_max, dt2_step = 1, 2*365, 1
 dt2_vals = np.arange(dt2_min, dt2_max+dt2_step, dt2_step)
 
 #### print the start/stop/step values for plotting later... 
-print("dt1_min, dt1_max, dt1_step", dt1_min, dt1_max, dt1_step)
+# print("dt1_min, dt1_max, dt1_step", dt1_min, dt1_max, dt1_step)
 print("dt2_min, dt2_max, dt2_step", dt2_min, dt2_max, dt2_step)
 
 detection_fractions = []
-for k, dt1_val in enumerate(dt1_vals):
-    print("iteration %i / %i"%(k, len(dt1_vals)+1))
-    detection_fractions_this_dt1 = []
-    for dt2_val in tqdm(dt2_vals):
-        obstimes = get_obstime(N=N, DT1=dt1_val, DT2=dt2_val)
-        rvs = paf.get_rvs(params, obstimes, verbose=False)
-        detected, delta_vsys = paf.get_detections(
-                    0.1, # km/s
-                    rvs,
-                    v0, 
-                    bool_arr='detet'
-                )
-        detection_fraction = len(P[detected])/len(P)
-        detection_fractions_this_dt1.append(detection_fraction)
-    detection_fractions.append(detection_fractions_this_dt1)
+# for k, dt1_val in enumerate(dt1_vals):
+#     print("iteration %i / %i"%(k, len(dt1_vals)+1))
+#     detection_fractions_this_dt1 = []
+for dt2_val in tqdm(dt2_vals):
+    obstimes = get_obstime(N=N, DT1=dt1_val, DT2=dt2_val)
+    rvs = paf.get_rvs(params, obstimes, verbose=False)
+    detected, delta_vsys = paf.get_detections(
+                0.1, # km/s
+                rvs,
+                v0, 
+                bool_arr='detet'
+            )
+    detection_fraction = len(P[detected])/len(P)
+    detection_fractions.append(detection_fraction)
 
 # save a numpy text file
 detection_fraction_array = np.array(detection_fractions)
-np.savetxt("detection_fractions.txt", detection_fraction_array)
+np.savetxt(args.filename+".txt", detection_fraction_array)
+d
