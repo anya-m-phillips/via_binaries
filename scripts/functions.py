@@ -168,25 +168,27 @@ def get_obstimes(N, rng=None): ### not currently in use
     obstimes_all = np.cumsum(deltaTs, axis=1) ##### THIS IS WHAT WILL GO INTO THE RV GENERATION FUNCTION!   
     return obstimes_all
 
-def get_rvs(params_all, obstimes_all, verbose=True):
+def get_rvs(params_all, obstimes_all, verbose=True,
+            add_noise=False, noise_level=None, rng=None):
+    """
+    add gaussian noise option; defaults to false
+    noise level in km/s
+    """
 
     RVs_all = []
     N=len(params_all[:,0])
 
-    if verbose==True:
-        for j in tqdm(range(N)):
-            params = params_all[j]
-            obstimes = obstimes_all[j]
+    iterator = tqdm(range(N)) if verbose else range(N)
+    for j in iterator:
+        params = params_all[j]
+        obstimes = obstimes_all[j]
 
-            rvs = radial_velocity(obstimes, params)
-            RVs_all.append(rvs)
-    if verbose==False:
-        for j in range(N):
-            params = params_all[j]
-            obstimes = obstimes_all[j]
+        rvs = radial_velocity(obstimes, params)
+        if add_noise==True:
+            rvs += rng.normal(0, noise_level, size=obstimes.shape)
 
-            rvs = radial_velocity(obstimes, params)
-            RVs_all.append(rvs)
+        RVs_all.append(rvs)
+
 
     rvs_all = np.array(RVs_all)
     return rvs_all
@@ -201,7 +203,7 @@ def get_detections(e_rv, rvs_all, v0_vals, bool_arr="undet"): #return "undet" of
     resid_rvs = rvs_all - mu_rvs[:, None]
 
     chi2_rvs = np.sum((resid_rvs/e_rv)**2, axis=1)
-    Nobs=3
+    Nobs=rvs_all.shape[1] ### previously this was always set to 3 -- bug ! 
     P_chi2 = stats.chi2.sf(chi2_rvs, df=Nobs-1)
     zscore = np.max(np.abs(resid_rvs/e_rv), axis = 1) # idk what this is,
 
