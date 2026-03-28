@@ -4,7 +4,6 @@ import sys
 #sys.path.append('/Users/anyaphillips/Desktop/harvard/research/via_binaries/scripts')
 sys.path.append('/n/home02/amphillips/via_binaries/scripts')
 import functions as paf
-import petar
 import numpy as np
 import argparse
 
@@ -23,7 +22,7 @@ import astropy.units as u
 binaries = pd.read_csv('cosmic_example_IBC.csv')
 N = len(binaries)
 print(N)
-
+erv_viamock = 0.11823167210684976 # from Fe/H=-2, Teff=4700K, Gmag=17, exposure time = 0.66 effective hours. 
 
 def calc_K(Mtot, M2, a, e, P, i):
     a1 = (M2/Mtot) * a
@@ -94,7 +93,7 @@ if __name__ == '__main__':
 
 dt1_val = args.dt1
 
-dt2_min, dt2_max, dt2_step = 30, 10*365, 10
+dt2_min, dt2_max, dt2_step = 1, 2*365, 1
 dt2_vals = np.arange(dt2_min, dt2_max+dt2_step, dt2_step)
 
 #### print the start/stop/step values for plotting later... 
@@ -107,9 +106,10 @@ detection_fractions = []
 #     detection_fractions_this_dt1 = []
 for dt2_val in tqdm(dt2_vals):
     obstimes = get_obstime(N=N, DT1=dt1_val, DT2=dt2_val)
-    rvs = paf.get_rvs(params, obstimes, verbose=False)
+    rvs = paf.get_rvs(params, obstimes, verbose=False, 
+                      add_noise=True, noise_level=erv_viamock, rng=rng)
     detected, delta_vsys = paf.get_detections(
-                0.1, # km/s
+                erv_viamock, # km/s
                 rvs,
                 v0, 
                 bool_arr='detet'
