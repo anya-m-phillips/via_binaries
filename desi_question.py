@@ -46,6 +46,19 @@ from matplotlib.colors import LinearSegmentedColormap
 
 import viamock
 
+def get_obstime(N, dT):
+    """
+    the exact observing cadence version of the above. 
+    i.e., observations will be separated by exactly DT1 and DT2.
+    """
+    base = np.repeat(0, N)
+    gap1 = np.repeat(dT, N)
+    # gap2 = np.repeat(DT2, N)
+
+    deltaTs = np.vstack((base, gap1)).T
+    obstimes_all = np.cumsum(deltaTs, axis=1) ##### THIS IS WHAT WILL GO INTO THE RV GENERATION FUNCTION!   
+    return obstimes_all
+
 lm_colors, hm_colors, simcolors = paf.define_simcolors()
 time_cmap = paf.define_time_cmap()
 # %%
@@ -60,78 +73,101 @@ print(N)
 single_masses = binaries['mass_1'].values
 fbins = binaries['binfrac'].values
 
+rng = np.random.default_rng(seed=42)
 pick_binary = np.zeros(len(fbins), dtype=bool)
 for k in tqdm(range(len(fbins))):
-    uu = np.random.uniform(size=1)
+    uu = rng.uniform(size=1)
     fbin = fbins[k]
     if uu<fbin:
         pick_binary[k]=True
 
-fig, ax = plt.subplots()
-ax.hist(np.log10(single_masses[~pick_binary]), bins=np.linspace(np.log10(0.08), 2, 100))
-ax.hist(np.log10(binaries['mass_1'][pick_binary]), bins=np.linspace(np.log10(0.08), 2, 100))
+
+
+# fig, ax = plt.subplots()
+# ax.hist(np.log10(single_masses[~pick_binary]), bins=np.linspace(np.log10(0.08), 2, 100))
+# ax.hist(np.log10(binaries['mass_1'][pick_binary]), bins=np.linspace(np.log10(0.08), 2, 100))
 # %%
 # cool, now generate RV curves for everyone
 
-dT = 1000 #* u.day
 
-rng = np.random.default_rng(seed=42)
+dT_list = np.array([0.5, 1, 3, 10, 50, 
+                    00, 365, 1000, 10000, 
+                    100000, int(1e6), int(1e7), 
+                    int(1e8)])
 
-m1 = binaries['mass_1'].values * u.Msun
-m2 = binaries['mass_2'].values * u.Msun
-mtot = m1+m2
-P = binaries['porb'].values * u.day # days
-a = calc_a(P, mtot)
+# dT = 1000 #* u.day
 
-e = binaries['ecc'].values
-i = paf.draw_inclinations(N, rng=rng)
-K = calc_K(mtot, m2, a, e, P, i)
-v0 = np.zeros(N)*(u.km/u.s)
+drv_meds = []
+drv_means = []
+for dT in tqdm(dT_list):
+    rng = np.random.default_rng(seed=42)
 
-w = rng.uniform(low=0, high=2*np.pi, size=N)
-phi0 = rng.uniform(low=0, high=1, size=N)
+    m1 = binaries['mass_1'].values * u.Msun
+    m2 = binaries['mass_2'].values * u.Msun
+    mtot = m1+m2
+    P = binaries['porb'].values * u.day # days
+    a = calc_a(P, mtot)
 
-params = np.array([
-    v0.to(u.km/u.s).value,
-    K.to(u.km/u.s).value, 
-    w,
-    phi0,
-    e,
-    P.to(u.day).value
-]).T
+    e = binaries['ecc'].values
+    i = paf.draw_inclinations(N, rng=rng)
+    K = calc_K(mtot, m2, a, e, P, i)
+    v0 = np.zeros(N)*(u.km/u.s)
 
-def get_obstime(N, dT):
-    """
-    the exact observing cadence version of the above. 
-    i.e., observations will be separated by exactly DT1 and DT2.
-    """
-    base = np.repeat(0, N)
-    gap1 = np.repeat(dT, N)
-    # gap2 = np.repeat(DT2, N)
+    w = rng.uniform(low=0, high=2*np.pi, size=N)
+    phi0 = rng.uniform(low=0, high=1, size=N)
 
-    deltaTs = np.vstack((base, gap1)).T
-    obstimes_all = np.cumsum(deltaTs, axis=1) ##### THIS IS WHAT WILL GO INTO THE RV GENERATION FUNCTION!   
-    return obstimes_all
+    params = np.array([
+        v0.to(u.km/u.s).value,
+        K.to(u.km/u.s).value, 
+        w,
+        phi0,
+        e,
+        P.to(u.day).value
+    ]).T
 
 
-obstimes = get_obstime(len(binaries['mass_1'][pick_binary]), dT)
+    obstimes = get_obstime(len(binaries['mass_1'][pick_binary]), dT)
 
-rvs = paf.get_rvs(params[pick_binary], obstimes, verbose=False)
-### ADD RV NOISE HERE
-sigma_rv = 0.1 # km/s
-rv_noise = np.random.normal(0, 0.1, rvs.shape)
-rvs_binary_noised = rvs + rv_noise
+    rvs = paf.get_rvs(params[pick_binary], obstimes, verbose=False)
+    ### ADD RV NOISE HERE
+    sigma_rv = 0.1 # km/s
+    rv_noise = rng.normal(0, sigma_rv, rvs.shape)
+    rvs_binary_noised = rvs + rv_noise
 
-rvs_single = np.zeros((len(single_masses[~pick_binary]),2))
-rv_single_noise = np.random.normal(0, 0.1, rvs_single.shape)
-rvs_single_noised = rvs_single + rv_single_noise
-rvs_noised = np.vstack((rvs_binary_noised, rvs_single_noised))
+    rvs_single = np.zeros((len(single_masses[~pick_binary]),2))
+    rv_single_noise = rng.normal(0, 0.1, rvs_single.shape)
+    rvs_single_noised = rvs_single + rv_single_noise
+    rvs_noised = np.vstack((rvs_binary_noised, rvs_single_noised))
 
-drv = rvs_noised[:,1] - rvs_noised[:,0]
-# drv_single = rvs_single_
-n_binary = len(binaries['mass_1'][pick_binary])
+    drv = rvs_noised[:,1] - rvs_noised[:,0]
+    # drv_single = rvs_single_
+    n_binary = len(binaries['mass_1'][pick_binary])
 
 
+    ### grab mean or median drv
+    drv_med = np.median(np.abs(drv))
+    drv_mean = np.mean(np.abs(drv))
+    drv_meds.append(drv_med)
+    drv_means.append(drv_mean)
+
+# %%
+fig, ax = plt.subplots()
+ax.scatter(dT_list, drv_meds)
+# ax.scatter(dT_list, drv_means)
+# ax.set_ylabel(r)
+# ax.set_yscale('log')
+ax.set_xscale('log')
+ax.set_xlabel(r'$\Delta T~[\rm day]$')
+ax.set_ylabel(r'median $\Delta v_r~[\rm km~s^{-1}]$')
+
+
+# ax.axvline(max(binaries['porb']), c='k', ls="--", lw=1)
+mi, ma = np.percentile(binaries['porb'], [5, 95])
+ax.axvspan(mi, ma, color='k', alpha=0.1)
+ax.axvline(np.median(binaries['porb']), c='k', ls='--')
+ax.set_ylim(bottom=0)
+
+# %%
 # bins = np.linspace(-4, 2.5, 100)
 bins = np.logspace(-4, 3, 100)
 fig, ax = plt.subplots()
